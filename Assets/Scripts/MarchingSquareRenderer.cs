@@ -45,14 +45,19 @@ public class MarchingSquareRenderer : MonoBehaviour
                 float x = _gridBound.offsetMin.x + j * GridStep;
                 var pos = new Vector2(x, y);
 
-                float weigth = 0;
+                float totalWeigth = 0;
                 foreach (Blob blob in blobs)
                 {
                     float distance = Vector2.Distance(pos, blob.transform.position);
-                    weigth += blob.WeightFunction(distance);
+
+                    float weight = blob.WeightFunction(distance);
+                    if (weight < 0)
+                        weight = 0;
+
+                    totalWeigth += weight;
                 }
 
-                vertices[i][j] = weigth > WeightThreshold;
+                vertices[i][j] = totalWeigth > WeightThreshold;
             }
 
         return vertices;
