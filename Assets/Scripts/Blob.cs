@@ -9,4 +9,10 @@ public class Blob : MonoBehaviour
     {
         WeightFunction = x => 8 - 2 * x;
     }
+
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawSphere(transform.position, 0.5f);
+    }
 }

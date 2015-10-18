@@ -1,12 +1,12 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-using System.Linq;
 using System;
 
 [RequireComponent(typeof(RectTransform))]
 public class MarchingSquareRenderer : MonoBehaviour
 {
     public GameObject BlobsRootNode;
+    public Material Material;
     public float GridStep = 0.1f;
     public float WeightThreshold = 10f;
     private RectTransform _gridBound;
@@ -16,7 +16,9 @@ public class MarchingSquareRenderer : MonoBehaviour
     {
         _gridBound = GetComponent<RectTransform>();
         _mesh = gameObject.AddComponent<MeshFilter>().mesh;
-        gameObject.AddComponent<MeshRenderer>();
+        
+        var meshRenderer = gameObject.AddComponent<MeshRenderer>();
+        meshRenderer.material = Material;
     }
 
     void Update()
@@ -262,6 +264,14 @@ public class MarchingSquareRenderer : MonoBehaviour
         _mesh.vertices = vertices.ToArray();
         _mesh.normals = normals.ToArray();
         _mesh.triangles = triangles.ToArray();
+    }
+
+    void OnDrawGizmos()
+    {
+        var bounds = GetComponent<RectTransform>();
+
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireCube(bounds.position, new Vector3(bounds.rect.width, bounds.rect.height));
     }
 }
 
