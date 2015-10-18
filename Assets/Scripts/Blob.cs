@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using System;
-using System.Collections;
 
 public class Blob : MonoBehaviour
 {
@@ -8,6 +7,6 @@ public class Blob : MonoBehaviour
 
     public Blob()
     {
-        WeightFunction = x => -Mathf.Log10(x);
+        WeightFunction = x => 8 - 2 * x;
     }
 }

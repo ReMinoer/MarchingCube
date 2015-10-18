@@ -6,11 +6,6 @@ using System;
 [RequireComponent(typeof(RectTransform))]
 public class MarchingSquareRenderer : MonoBehaviour
 {
-    public struct WeightGrid
-    {
-        public bool[][] Vertices { get; set; }
-    }
-
     public GameObject BlobsRootNode;
     public float GridStep = 0.1f;
     public float WeightThreshold = 10f;
@@ -27,28 +22,28 @@ public class MarchingSquareRenderer : MonoBehaviour
     void Update()
     {
         // NOTE : Ne pas updater la liste de blob à chaque update
-        IEnumerable<Blob> blobs = (BlobsRootNode ?? gameObject).GetComponentsInChildren<Blob>();
+        Blob[] blobs = (BlobsRootNode ?? gameObject).GetComponentsInChildren<Blob>();
         bool[][] vertices = ComputeGrid(blobs);
 
         int[][] patterns = ComputeGridPatterns(vertices);
         GenerateMesh(patterns);
     }
 
-    public bool[][] ComputeGrid(IEnumerable<Blob> blobs)
+    public bool[][] ComputeGrid(Blob[] blobs)
     {
-        int sizeX = (int)(_gridBound.rect.width / GridStep);
-        int sizeY = (int)(_gridBound.rect.height / GridStep);
+        int sizeX = (int)(_gridBound.rect.width / GridStep) + 1;
+        int sizeY = (int)(_gridBound.rect.height / GridStep) + 1;
 
-        bool[][] vertices = new bool[sizeY][];
+        var vertices = new bool[sizeY][];
         for (int i = 0; i < sizeY; i++)
             vertices[i] = new bool[sizeX];
 
         for (int i = 0; i < sizeY; i++)
             for (int j = 0; j < sizeX; j++)
             {
-                float y = _gridBound.anchorMin.y + i * GridStep;
-                float x = _gridBound.anchorMin.x + j * GridStep;
-                Vector2 pos = new Vector2(x, y);
+                float y = _gridBound.offsetMin.y + i * GridStep;
+                float x = _gridBound.offsetMin.x + j * GridStep;
+                var pos = new Vector2(x, y);
 
                 float weigth = 0;
                 foreach (Blob blob in blobs)
@@ -65,7 +60,7 @@ public class MarchingSquareRenderer : MonoBehaviour
 
     private int[][] ComputeGridPatterns(bool[][] vertices)
     {
-        int[][] cases = new int[vertices.Length - 1][];
+        var cases = new int[vertices.Length - 1][];
         for (int i = 0; i < cases.Length; i++)
             cases[i] = new int[vertices[i].Length - 1];
 
@@ -86,95 +81,105 @@ public class MarchingSquareRenderer : MonoBehaviour
         _mesh.Clear();
         float half = GridStep / 2;
 
-        List<Vector3> vertices = new List<Vector3>();
-        List<int> triangles = new List<int>();
+        var vertices = new List<Vector3>();
+        var normals = new List<Vector3>();
+        var triangles = new List<int>();
 
-        int triangleCount = 0;
+        int verticesCount = 0;
         for (int i = 0; i < patterns.Length; i++)
         {
             for (int j = 0; j < patterns[i].Length; j++)
             {
-                float x = j * GridStep;
-                float y = i * GridStep;
+                float y = _gridBound.offsetMin.y + i * GridStep;
+                float x = _gridBound.offsetMin.x + j * GridStep;
 
                 switch (patterns[i][j])
                 {
                     case 0:
                         break;
                     case 1:
-                        vertices.Add(new Vector3(x + half, y));
                         vertices.Add(new Vector3(x, y + half));
+                        vertices.Add(new Vector3(x + half, y));
                         vertices.Add(new Vector3(x, y));
-                        triangles.AddTriangle(triangleCount, 0, 1, 2);
-                        triangleCount += 1;
+                        normals.AddNormals(3);
+                        triangles.AddTriangle(verticesCount, 0, 1, 2);
+                        verticesCount += 3;
                         break;
                     case 2:
-                        vertices.Add(new Vector3(x + half, y));
                         vertices.Add(new Vector3(x + GridStep, y + half));
                         vertices.Add(new Vector3(x + GridStep, y));
-                        triangles.AddTriangle(triangleCount, 0, 1, 2);
-                        triangleCount += 1;
+                        vertices.Add(new Vector3(x + half, y));
+                        normals.AddNormals(3);
+                        triangles.AddTriangle(verticesCount, 0, 1, 2);
+                        verticesCount += 3;
                         break;
                     case 3:
-                        vertices.Add(new Vector3(x, y));
-                        vertices.Add(new Vector3(x + GridStep, y));
-                        vertices.Add(new Vector3(x + GridStep, y + half));
                         vertices.Add(new Vector3(x, y + half));
-                        triangles.AddRectangle(triangleCount, 0, 1, 2, 3);
-                        triangleCount += 2;
+                        vertices.Add(new Vector3(x + GridStep, y + half));
+                        vertices.Add(new Vector3(x + GridStep, y));
+                        vertices.Add(new Vector3(x, y));
+                        normals.AddNormals(4);
+                        triangles.AddRectangle(verticesCount, 0, 1, 2, 3);
+                        verticesCount += 4;
                         break;
                     case 4:
                         vertices.Add(new Vector3(x + half, y + GridStep));
-                        vertices.Add(new Vector3(x + GridStep, y + half));
                         vertices.Add(new Vector3(x + GridStep, y + GridStep));
-                        triangles.AddTriangle(triangleCount, 0, 1, 2);
-                        triangleCount += 1;
+                        vertices.Add(new Vector3(x + GridStep, y + half));
+                        normals.AddNormals(3);
+                        triangles.AddTriangle(verticesCount, 0, 1, 2);
+                        verticesCount += 3;
                         break;
                     case 5:
-                        vertices.Add(new Vector3(x, y));
-                        vertices.Add(new Vector3(x, y + half));
                         vertices.Add(new Vector3(x + half, y + GridStep));
                         vertices.Add(new Vector3(x + GridStep, y + GridStep));
                         vertices.Add(new Vector3(x + GridStep, y + half));
                         vertices.Add(new Vector3(x + half, y));
-                        triangles.AddTriangle(triangleCount, 0, 1, 5);
-                        triangles.AddRectangle(triangleCount, 1, 2, 4, 5);
-                        triangles.AddTriangle(triangleCount, 2, 3, 4);
-                        triangleCount += 4;
+                        vertices.Add(new Vector3(x, y));
+                        vertices.Add(new Vector3(x, y + half));
+                        normals.AddNormals(6);
+                        triangles.AddTriangle(verticesCount, 0, 1, 2);
+                        triangles.AddRectangle(verticesCount, 0, 2, 3, 5);
+                        triangles.AddTriangle(verticesCount, 5, 3, 4);
+                        verticesCount += 6;
                         break;
                     case 6:
-                        vertices.Add(new Vector3(x + half, y));
                         vertices.Add(new Vector3(x + half, y + GridStep));
                         vertices.Add(new Vector3(x + GridStep, y + GridStep));
                         vertices.Add(new Vector3(x + GridStep, y));
-                        triangles.AddRectangle(triangleCount, 0, 1, 2, 3);
-                        triangleCount += 2;
+                        vertices.Add(new Vector3(x + half, y));
+                        normals.AddNormals(4);
+                        triangles.AddRectangle(verticesCount, 0, 1, 2, 3);
+                        verticesCount += 4;
                         break;
                     case 7:
-                        vertices.Add(new Vector3(x, y));
-                        vertices.Add(new Vector3(x, y + half));
                         vertices.Add(new Vector3(x + half, y + GridStep));
                         vertices.Add(new Vector3(x + GridStep, y + GridStep));
                         vertices.Add(new Vector3(x + GridStep, y));
-                        triangles.AddTriangle(triangleCount, 0, 1, 4);
-                        triangles.AddTriangle(triangleCount, 1, 2, 4);
-                        triangles.AddTriangle(triangleCount, 2, 3, 4);
-                        triangleCount += 3;
+                        vertices.Add(new Vector3(x, y));
+                        vertices.Add(new Vector3(x, y + half));
+                        normals.AddNormals(5);
+                        triangles.AddTriangle(verticesCount, 0, 1, 2);
+                        triangles.AddTriangle(verticesCount, 0, 2, 4);
+                        triangles.AddTriangle(verticesCount, 4, 2, 3);
+                        verticesCount += 5;
                         break;
                     case 8:
-                        vertices.Add(new Vector3(x, y + half));
                         vertices.Add(new Vector3(x, y + GridStep));
                         vertices.Add(new Vector3(x + half, y + GridStep));
-                        triangles.AddTriangle(triangleCount, 0, 1, 2);
-                        triangleCount += 1;
+                        vertices.Add(new Vector3(x, y + half));
+                        normals.AddNormals(3);
+                        triangles.AddTriangle(verticesCount, 0, 1, 2);
+                        verticesCount += 3;
                         break;
                     case 9:
-                        vertices.Add(new Vector3(x + half, y));
-                        vertices.Add(new Vector3(x + half, y + GridStep));
                         vertices.Add(new Vector3(x, y + GridStep));
+                        vertices.Add(new Vector3(x + half, y + GridStep));
+                        vertices.Add(new Vector3(x + half, y));
                         vertices.Add(new Vector3(x, y));
-                        triangles.AddRectangle(triangleCount, 0, 1, 2, 3);
-                        triangleCount += 2;
+                        normals.AddNormals(4);
+                        triangles.AddRectangle(verticesCount, 0, 1, 2, 3);
+                        verticesCount += 4;
                         break;
                     case 10:
                         vertices.Add(new Vector3(x, y + GridStep));
@@ -183,29 +188,32 @@ public class MarchingSquareRenderer : MonoBehaviour
                         vertices.Add(new Vector3(x + GridStep, y));
                         vertices.Add(new Vector3(x + half, y));
                         vertices.Add(new Vector3(x, y + half));
-                        triangles.AddTriangle(triangleCount, 0, 1, 5);
-                        triangles.AddRectangle(triangleCount, 1, 2, 4, 5);
-                        triangles.AddTriangle(triangleCount, 2, 3, 4);
-                        triangleCount += 4;
+                        normals.AddNormals(6);
+                        triangles.AddTriangle(verticesCount, 0, 1, 5);
+                        triangles.AddRectangle(verticesCount, 1, 2, 4, 5);
+                        triangles.AddTriangle(verticesCount, 4, 2, 3);
+                        verticesCount += 6;
                         break;
                     case 11:
-                        vertices.Add(new Vector3(x, y));
                         vertices.Add(new Vector3(x, y + GridStep));
                         vertices.Add(new Vector3(x + half, y + GridStep));
                         vertices.Add(new Vector3(x + GridStep, y + half));
                         vertices.Add(new Vector3(x + GridStep, y));
-                        triangles.AddTriangle(triangleCount, 0, 1, 2);
-                        triangles.AddTriangle(triangleCount, 0, 2, 3);
-                        triangles.AddTriangle(triangleCount, 0, 3, 4);
-                        triangleCount += 3;
+                        vertices.Add(new Vector3(x, y));
+                        normals.AddNormals(5);
+                        triangles.AddTriangle(verticesCount, 0, 1, 4);
+                        triangles.AddTriangle(verticesCount, 1, 2, 4);
+                        triangles.AddTriangle(verticesCount, 2, 3, 4);
+                        verticesCount += 5;
                         break;
                     case 12:
                         vertices.Add(new Vector3(x, y + GridStep));
                         vertices.Add(new Vector3(x + GridStep, y + GridStep));
                         vertices.Add(new Vector3(x + GridStep, y + half));
                         vertices.Add(new Vector3(x, y + half));
-                        triangles.AddRectangle(triangleCount, 0, 1, 2, 3);
-                        triangleCount += 2;
+                        normals.AddNormals(4);
+                        triangles.AddRectangle(verticesCount, 0, 1, 2, 3);
+                        verticesCount += 4;
                         break;
                     case 13:
                         vertices.Add(new Vector3(x, y + GridStep));
@@ -213,29 +221,32 @@ public class MarchingSquareRenderer : MonoBehaviour
                         vertices.Add(new Vector3(x + GridStep, y + half));
                         vertices.Add(new Vector3(x + half, y));
                         vertices.Add(new Vector3(x, y));
-                        triangles.AddTriangle(triangleCount, 0, 1, 2);
-                        triangles.AddTriangle(triangleCount, 0, 2, 3);
-                        triangles.AddTriangle(triangleCount, 0, 3, 4);
-                        triangleCount += 3;
+                        normals.AddNormals(5);
+                        triangles.AddTriangle(verticesCount, 0, 1, 2);
+                        triangles.AddTriangle(verticesCount, 0, 2, 3);
+                        triangles.AddTriangle(verticesCount, 0, 3, 4);
+                        verticesCount += 5;
                         break;
                     case 14:
+                        vertices.Add(new Vector3(x, y + GridStep));
                         vertices.Add(new Vector3(x + GridStep, y + GridStep));
                         vertices.Add(new Vector3(x + GridStep, y));
-                        vertices.Add(new Vector3(x, y));
+                        vertices.Add(new Vector3(x + half, y));
                         vertices.Add(new Vector3(x, y + half));
-                        vertices.Add(new Vector3(x + half, y + GridStep));
-                        triangles.AddTriangle(triangleCount, 0, 1, 2);
-                        triangles.AddTriangle(triangleCount, 0, 2, 3);
-                        triangles.AddTriangle(triangleCount, 0, 3, 4);
-                        triangleCount += 3;
+                        normals.AddNormals(5);
+                        triangles.AddTriangle(verticesCount, 0, 1, 4);
+                        triangles.AddTriangle(verticesCount, 1, 3, 4);
+                        triangles.AddTriangle(verticesCount, 1, 2, 3);
+                        verticesCount += 5;
                         break;
                     case 15:
-                        vertices.Add(new Vector3(x, y));
-                        vertices.Add(new Vector3(x + GridStep, y));
-                        vertices.Add(new Vector3(x + GridStep, y + GridStep));
                         vertices.Add(new Vector3(x, y + GridStep));
-                        triangles.AddRectangle(triangleCount, 0, 1, 2, 3);
-                        triangleCount += 2;
+                        vertices.Add(new Vector3(x + GridStep, y + GridStep));
+                        vertices.Add(new Vector3(x + GridStep, y));
+                        vertices.Add(new Vector3(x, y));
+                        normals.AddNormals(4);
+                        triangles.AddRectangle(verticesCount, 0, 1, 2, 3);
+                        verticesCount += 4;
                         break;
                     default:
                         throw new NotSupportedException();
@@ -244,6 +255,7 @@ public class MarchingSquareRenderer : MonoBehaviour
         }
 
         _mesh.vertices = vertices.ToArray();
+        _mesh.normals = normals.ToArray();
         _mesh.triangles = triangles.ToArray();
     }
 }
@@ -265,5 +277,11 @@ static class MeshFactoryTools
         list.Add(currentIndex + a);
         list.Add(currentIndex + c);
         list.Add(currentIndex + d);
+    }
+
+    static public void AddNormals(this List<Vector3> list, int count)
+    {
+        for (int i = 0; i < count; i++)
+            list.Add(Vector3.back);
     }
 }
