@@ -338,8 +338,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BlobsRootNode: {fileID: 1994616625}
   Material: {fileID: 2100000, guid: 25072be0d8809ca429ac62e0bf72d3b8, type: 2}
-  GridStep: .200000003
-  WeightThreshold: 0
+  GridStep: .100000001
+  WeightThreshold: 1
 --- !u!224 &1994616627
 RectTransform:
   m_ObjectHideFlags: 0

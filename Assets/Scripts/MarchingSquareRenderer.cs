@@ -25,10 +25,9 @@ public class MarchingSquareRenderer : MonoBehaviour
     {
         // NOTE : Ne pas updater la liste de blob à chaque update
         Blob[] blobs = (BlobsRootNode ?? gameObject).GetComponentsInChildren<Blob>();
-        bool[][] vertices = ComputeGrid(blobs);
-
-        int[][] patterns = ComputeGridPatterns(vertices);
-        GenerateMesh(patterns);
+        bool[][] grid = ComputeGrid(blobs);
+        
+        GenerateMesh(grid);
     }
 
     public bool[][] ComputeGrid(Blob[] blobs)
@@ -36,9 +35,9 @@ public class MarchingSquareRenderer : MonoBehaviour
         int sizeX = (int)(_gridBound.rect.width / GridStep) + 1;
         int sizeY = (int)(_gridBound.rect.height / GridStep) + 1;
 
-        var vertices = new bool[sizeY][];
+        var grid = new bool[sizeY][];
         for (int i = 0; i < sizeY; i++)
-            vertices[i] = new bool[sizeX];
+            grid[i] = new bool[sizeX];
 
         for (int i = 0; i < sizeY; i++)
             for (int j = 0; j < sizeX; j++)
@@ -59,31 +58,13 @@ public class MarchingSquareRenderer : MonoBehaviour
                     totalWeigth += weight;
                 }
 
-                vertices[i][j] = totalWeigth > WeightThreshold;
+                grid[i][j] = totalWeigth > WeightThreshold;
             }
 
-        return vertices;
+        return grid;
     }
 
-    private int[][] ComputeGridPatterns(bool[][] vertices)
-    {
-        var cases = new int[vertices.Length - 1][];
-        for (int i = 0; i < cases.Length; i++)
-            cases[i] = new int[vertices[i].Length - 1];
-
-        for (int i = 0; i < cases.Length; i++)
-            for (int j = 0; j < cases[i].Length; j++)
-            {
-                if (vertices[i][j]) cases[i][j] += 1;
-                if (vertices[i][j + 1]) cases[i][j] += 2;
-                if (vertices[i + 1][j + 1]) cases[i][j] += 4;
-                if (vertices[i + 1][j]) cases[i][j] += 8;
-            }
-
-        return cases;
-    }
-
-    private void GenerateMesh(int[][] patterns)
+    private void GenerateMesh(bool[][] grid)
     {
         _mesh.Clear();
         float half = GridStep / 2;
@@ -93,14 +74,21 @@ public class MarchingSquareRenderer : MonoBehaviour
         var triangles = new List<int>();
 
         int verticesCount = 0;
-        for (int i = 0; i < patterns.Length; i++)
+        for (int i = 0; i < grid.Length - 1; i++)
         {
-            for (int j = 0; j < patterns[i].Length; j++)
+            for (int j = 0; j < grid[i].Length - 1; j++)
             {
+                int pattern = 0;
+
+                if (grid[i][j]) pattern += 1;
+                if (grid[i][j + 1]) pattern += 2;
+                if (grid[i + 1][j + 1]) pattern += 4;
+                if (grid[i + 1][j]) pattern += 8;
+
                 float y = _gridBound.offsetMin.y + i * GridStep;
                 float x = _gridBound.offsetMin.x + j * GridStep;
 
-                switch (patterns[i][j])
+                switch (pattern)
                 {
                     case 0:
                         break;

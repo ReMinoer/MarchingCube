@@ -7,7 +7,7 @@ public class Blob : MonoBehaviour
 
     public Blob()
     {
-        WeightFunction = x => 8 - 2 * x;
+        WeightFunction = x => -Mathf.Log10(x/10);
     }
 
     void OnDrawGizmos()
