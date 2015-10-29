@@ -17,6 +17,10 @@ public class MarchingCubeRenderer : MonoBehaviour
     {
         new SingleFilter(),
         new DuoFilter(),
+        new TrioFilter(), 
+        new SquareFilter(), 
+        new TetraFilter(), 
+        new SnakeFilter()
     };
 
     void Awake()
@@ -96,7 +100,10 @@ public class MarchingCubeRenderer : MonoBehaviour
                         var localCube = new LocalCube(grid, i, j, k);
 
                         if (localCube.ApplyFilter(filter, out result, out state))
-                            filter.Draw(meshData, result.ToArray(), !state);
+                        {
+                            Vector3 cubeOrigin = _gridBound.bounds.min + new Vector3(i, j, k) * GridStep;
+                            filter.Draw(meshData, cubeOrigin, result.ToArray(), !state);
+                        }
                     }
                 }
 
@@ -150,7 +157,7 @@ public class MarchingCubeRenderer : MonoBehaviour
             Stack<NeighborhoodRule> rules = filter.GenerateRulesStack();
 
             var resultQueue = new Queue<int>();
-            foreach (PointState pointState in this.Select(x => x))
+            foreach (PointState pointState in this.Select(x => x).ToArray())
             {
                 resultQueue.Enqueue(pointState.PointIndex);
 
@@ -176,7 +183,11 @@ public class MarchingCubeRenderer : MonoBehaviour
 
             NeighborhoodRule rule = rules.Pop();
 
-            foreach (PointState point in this.Where(x => LookAtTable.Neighborhood[result.ElementAt(rule.PointId)].Contains(x.PointIndex)))
+            int resultPoint = result.ElementAt(rule.PointId);
+            int[] neighbors = LookAtTable.Neighborhood[resultPoint];
+            IEnumerable<PointState> localNeighbors = this.Where(x => neighbors.Contains(x.PointIndex)).ToArray();
+
+            foreach (PointState point in localNeighbors)
             {
                 if ((rule.MustBe == MustBe.Equal && point.Value == this[rule.PointId])
                     || (rule.MustBe == MustBe.NotEqual && point.Value != this[rule.PointId]))
@@ -265,16 +276,6 @@ public class MarchingCubeRenderer : MonoBehaviour
          *   0----1
          */
 
-        /*  Cube :
-         * 
-         *     4----.
-         *   ./|   /|
-         *   2----. |
-         *   | 1--|-5
-         *   |/   |/
-         *   0----3
-         */
-
         public DuoFilter()
         {
             int p1 = NeighborOf(0, MustBe.Equal);
@@ -290,6 +291,16 @@ public class MarchingCubeRenderer : MonoBehaviour
 
     public class TrioFilter : FilterBuilder
     {
+        /*  Cube :
+         * 
+         *     2----6
+         *   ./|   /|
+         *   3----. |
+         *   | 1--|-5
+         *   |/   |/
+         *   0----4
+         */
+
         public TrioFilter()
         {
             int p1 = NeighborOf(0, MustBe.Equal);
@@ -307,6 +318,16 @@ public class MarchingCubeRenderer : MonoBehaviour
 
     public class SquareFilter : FilterBuilder
     {
+        /*  Cube :
+         * 
+         *     2----6
+         *   ./|   /|
+         *   3----7 |
+         *   | 1--|-5
+         *   |/   |/
+         *   0----4
+         */
+
         public SquareFilter()
         {
             int p1 = NeighborOf(0, MustBe.Equal);
@@ -322,6 +343,64 @@ public class MarchingCubeRenderer : MonoBehaviour
         }
     }
 
+    public class TetraFilter : FilterBuilder
+    {
+        /*  Cube :
+         * 
+         *     2----6
+         *   ./|   /|
+         *   4----. |
+         *   | 1--|-3
+         *   |/   |/
+         *   0----5
+         */
+
+        public TetraFilter()
+        {
+            int p1 = NeighborOf(0, MustBe.Equal);
+            int p2 = NeighborOf(p1, MustBe.Equal);
+            int p3 = NeighborOf(p1, MustBe.Equal);
+
+            int p4 = NeighborOf(0, MustBe.NotEqual);
+            int p5 = NeighborOf(0, MustBe.NotEqual);
+            int p6 = NeighborOf(p2, MustBe.NotEqual);
+
+            AddQuad(0, p4, 0, p5, p5, p3, p2, p4);
+            AddQuad(p2, p4, p3, p5, p3, p6, p2, p6);
+        }
+    }
+
+    public class SnakeFilter : FilterBuilder
+    {
+        /*  Cube :
+         * 
+         *     4----6
+         *   ./|   /|
+         *   1----7 |
+         *   | 3--|-5
+         *   |/   |/
+         *   0----2
+         */
+
+        public SnakeFilter()
+        {
+            int p1 = NeighborOf(0, MustBe.NotEqual);
+            int p2 = NeighborOf(0, MustBe.NotEqual);
+            int p3 = NeighborOf(0, MustBe.Equal);
+
+            int p4 = NeighborOf(p3, MustBe.NotEqual);
+            int p5 = NeighborOf(p3, MustBe.Equal);
+
+            int p6 = NeighborOf(p5, MustBe.Equal);
+            int p7 = NeighborOf(p5, MustBe.NotEqual);
+
+            AddTriangle(0, p1, p3, p4, 0, p2);
+            AddTriangle(p3, p4, p6, p7, p4, p6);
+            AddTriangle(p6, p7, 0, p2, p2, p5);
+            AddTriangle(p3, p4, 0, p2, p6, p7);
+        }
+    }
+
     #endregion // Filters
 
     #region Base
@@ -329,7 +408,7 @@ public class MarchingCubeRenderer : MonoBehaviour
     public interface IFilterBuilder
     {
         Stack<NeighborhoodRule> GenerateRulesStack();
-        void Draw(MeshData meshData, int[] solution, bool reverseNormal);
+        void Draw(MeshData meshData, Vector3 cubeOrigin, int[] solution, bool reverseNormal);
     }
 
     public struct NeighborhoodRule
@@ -370,6 +449,10 @@ public class MarchingCubeRenderer : MonoBehaviour
             Triangles.Add(Vertices.Count + a);
             Triangles.Add(Vertices.Count + b);
             Triangles.Add(Vertices.Count + c);
+
+            Triangles.Add(Vertices.Count + a);
+            Triangles.Add(Vertices.Count + c);
+            Triangles.Add(Vertices.Count + b);
         }
     }
 
@@ -417,10 +500,14 @@ public class MarchingCubeRenderer : MonoBehaviour
 
         public Stack<NeighborhoodRule> GenerateRulesStack()
         {
-            return new Stack<NeighborhoodRule>(_rules);
+            _rules.Reverse();
+            var stack = new Stack<NeighborhoodRule>(_rules);
+            _rules.Reverse();
+
+            return stack;
         }
 
-        public void Draw(MeshData meshData, int[] solution, bool reverseNormal)
+        public void Draw(MeshData meshData, Vector3 cubeOrigin, int[] solution, bool reverseNormal)
         {
             var edges = new List<int>();
             foreach (TriangleDescriptor tri in _trianglesDescriptors)
@@ -443,7 +530,7 @@ public class MarchingCubeRenderer : MonoBehaviour
             }
 
             foreach (var edge in edges)
-                meshData.Vertices.Add(LookAtTable.EdgeCenters[edge]);
+                meshData.Vertices.Add(cubeOrigin + LookAtTable.EdgeCenters[edge]);
         }
     }
 
