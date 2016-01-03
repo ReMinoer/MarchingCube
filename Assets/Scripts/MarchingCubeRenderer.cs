@@ -43,7 +43,8 @@ public class MarchingCubeRenderer : MonoBehaviour
         bool[][][] grid = ComputeGrid(blobs);
         _grid = grid;
 
-        GenerateMesh(grid);
+        //GenerateMesh(grid);
+        CreateMesh(grid);
     }
 
     void OnDrawGizmos()
@@ -138,6 +139,69 @@ public class MarchingCubeRenderer : MonoBehaviour
 
         _mesh.vertices = meshData.Vertices.ToArray();
         _mesh.triangles = meshData.Triangles.ToArray();
+    }
+
+    /*  Cube :
+         * 
+         *     4----5
+         *    /|   /|
+         *   0----1 |
+         *   | 7--|-6
+         *   |/   |/
+         *   3----2
+         */
+    // NOTE: Version annexe de GenerateMesh, à tester
+    private void CreateMesh(bool[][][] grid)
+    {
+        _mesh.Clear();
+        var meshData = new MeshData();
+
+        for (int x = 0; x < grid.Length - 1; x++)
+            for (int y = 0; y < grid[x].Length - 1; y++)
+                for (int z = 0; z < grid[x][y].Length - 1; z++)
+                {
+                    int index = GetIntersectedEdgesIndex(x, y, z, grid);
+                    int intersectedEdges = LookAtTable.intersectedIndex[index];
+
+                    Vector3[] intersectedEdgesCenters = new Vector3[12];
+                    for (int i=0;i<12;i++)
+                    {
+                        if ((intersectedEdges & (1 << i)) != 0)
+                        {
+                            intersectedEdgesCenters[i].x = x + LookAtTable.edgeCenterRelativePosition[i].x; 
+                            intersectedEdgesCenters[i].y = y + LookAtTable.edgeCenterRelativePosition[i].y;
+                            intersectedEdgesCenters[i].z = z + LookAtTable.edgeCenterRelativePosition[i].z;
+                        }
+                    }
+
+                    for (int i = 0; i < 5; i++)
+                    {
+                        if (LookAtTable.intersectedEdgesToTriangles[index, 3 * i] < 0)
+                            break;
+
+                        int currentIndex = meshData.Vertices.Count;
+                        for (int j = 0; j < 3; j++)
+                        {
+                            int vertice = LookAtTable.intersectedEdgesToTriangles[index, 3 * i + j];
+                            meshData.Triangles.Add(currentIndex + j);
+                            meshData.Vertices.Add(intersectedEdgesCenters[vertice]);
+                        }
+                    }
+                }
+        _mesh.vertices = meshData.Vertices.ToArray();
+        _mesh.triangles = meshData.Triangles.ToArray();
+    }
+
+    private int GetIntersectedEdgesIndex(int x, int y, int z, bool[][][] grid)
+    {
+        int index = 0;
+        for (int i = 0; i < 8; i++)
+        {
+            bool temp = grid[x + LookAtTable.vertexRelativePosition[i, 0]][y + LookAtTable.vertexRelativePosition[i, 1]][z + LookAtTable.vertexRelativePosition[i, 2]];
+            if(temp)
+                index |= 1 << i;
+        }   
+        return index;
     }
 
     #region Filters
