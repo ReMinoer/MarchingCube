@@ -150,7 +150,7 @@ public class MarchingCubeRenderer : MonoBehaviour
          *   |/   |/
          *   3----2
          */
-    // NOTE: Version annexe de GenerateMesh, à tester
+    // NOTE: Version annexe de GenerateMesh, attention, cube inversé par rapport aux autres méthodes
     private void CreateMesh(bool[][][] grid)
     {
         _mesh.Clear();
@@ -160,20 +160,21 @@ public class MarchingCubeRenderer : MonoBehaviour
             for (int y = 0; y < grid[x].Length - 1; y++)
                 for (int z = 0; z < grid[x][y].Length - 1; z++)
                 {
+                    // En partant des sommets in / out, on récupère les arrètes intersectées.
                     int index = GetIntersectedEdgesIndex(x, y, z, grid);
                     int intersectedEdges = LookAtTable.intersectedIndex[index];
 
                     Vector3[] intersectedEdgesCenters = new Vector3[12];
                     for (int i=0;i<12;i++)
                     {
-                        if ((intersectedEdges & (1 << i)) != 0)
+                        if ((intersectedEdges & (1 << i)) != 0) //Moche: On regarde le i-ème bit de intersectedEdges, si il est à 1 on récupère le centre de l'arrète intersectée
                         {
                             intersectedEdgesCenters[i].x = x + LookAtTable.edgeCenterRelativePosition[i].x; 
                             intersectedEdgesCenters[i].y = y + LookAtTable.edgeCenterRelativePosition[i].y;
                             intersectedEdgesCenters[i].z = z + LookAtTable.edgeCenterRelativePosition[i].z;
                         }
                     }
-
+                    // A partir des arrèetes intersectées, on va chercher quels triangles il faut créer.
                     for (int i = 0; i < 5; i++)
                     {
                         if (LookAtTable.intersectedEdgesToTriangles[index, 3 * i] < 0)
@@ -195,11 +196,16 @@ public class MarchingCubeRenderer : MonoBehaviour
     private int GetIntersectedEdgesIndex(int x, int y, int z, bool[][][] grid)
     {
         int index = 0;
+        int puissance = 1;
         for (int i = 0; i < 8; i++)
         {
             bool temp = grid[x + LookAtTable.vertexRelativePosition[i, 0]][y + LookAtTable.vertexRelativePosition[i, 1]][z + LookAtTable.vertexRelativePosition[i, 2]];
             if(temp)
-                index |= 1 << i;
+            {
+                //index |= 1 << i; // Moche
+                index += puissance;
+            }
+            puissance *= 2;
         }   
         return index;
     }
