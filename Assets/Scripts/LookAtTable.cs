@@ -2,15 +2,16 @@
 
 static public class LookAtTable
 {
+
     /*  Cube :
-        * 
-        *     3----7
-        *   ./|   /|
-        *   2----6 |
-        *   | 1--|-5
-        *   |/   |/
-        *   0----4
-        */
+         * 
+         *     4----5
+         *    /|   /|
+         *   0----1 |
+         *   | 7--|-6
+         *   |/   |/
+         *   3----2
+         */
 
     static public readonly int[][] VertexRelativePosition;
     static public readonly Vector3[] EdgeCenterRelativePosition;
