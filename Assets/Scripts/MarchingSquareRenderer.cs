@@ -1,6 +1,7 @@
-﻿using UnityEngine;
+﻿using System;
 using System.Collections.Generic;
-using System;
+using System.Linq;
+using UnityEngine;
 
 [RequireComponent(typeof(RectTransform))]
 public class MarchingSquareRenderer : MonoBehaviour
@@ -11,24 +12,6 @@ public class MarchingSquareRenderer : MonoBehaviour
     public float WeightThreshold = 10f;
     private RectTransform _gridBound;
     private Mesh _mesh;
-
-    void Awake()
-    {
-        _gridBound = GetComponent<RectTransform>();
-        _mesh = gameObject.AddComponent<MeshFilter>().mesh;
-        
-        var meshRenderer = gameObject.AddComponent<MeshRenderer>();
-        meshRenderer.material = Material;
-    }
-
-    void Update()
-    {
-        // NOTE : Ne pas updater la liste de blob à chaque update
-        Blob[] blobs = (BlobsRootNode ?? gameObject).GetComponentsInChildren<Blob>();
-        bool[][] grid = ComputeGrid(blobs);
-        
-        GenerateMesh(grid);
-    }
 
     public bool[][] ComputeGrid(Blob[] blobs)
     {
@@ -64,6 +47,26 @@ public class MarchingSquareRenderer : MonoBehaviour
         return grid;
     }
 
+    void Awake()
+    {
+        _gridBound = GetComponent<RectTransform>();
+        _mesh = gameObject.AddComponent<MeshFilter>().mesh;
+
+        var meshRenderer = gameObject.AddComponent<MeshRenderer>();
+        meshRenderer.material = Material;
+    }
+
+    void Update()
+    {
+        Blob[] blobs = (BlobsRootNode ?? gameObject).GetComponentsInChildren<Blob>();
+
+        if (blobs.All(x => !x.Dirty))
+            return;
+
+        bool[][] grid = ComputeGrid(blobs);
+        GenerateMesh(grid);
+    }
+
     private void GenerateMesh(bool[][] grid)
     {
         _mesh.Clear();
@@ -80,10 +83,14 @@ public class MarchingSquareRenderer : MonoBehaviour
             {
                 int pattern = 0;
 
-                if (grid[i][j]) pattern += 1;
-                if (grid[i][j + 1]) pattern += 2;
-                if (grid[i + 1][j + 1]) pattern += 4;
-                if (grid[i + 1][j]) pattern += 8;
+                if (grid[i][j])
+                    pattern += 1;
+                if (grid[i][j + 1])
+                    pattern += 2;
+                if (grid[i + 1][j + 1])
+                    pattern += 4;
+                if (grid[i + 1][j])
+                    pattern += 8;
 
                 float y = _gridBound.offsetMin.y + i * GridStep;
                 float x = _gridBound.offsetMin.x + j * GridStep;

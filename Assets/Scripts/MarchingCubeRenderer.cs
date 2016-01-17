@@ -1,6 +1,5 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
+using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider))]
 public class MarchingCubeRenderer : MonoBehaviour
@@ -13,17 +12,7 @@ public class MarchingCubeRenderer : MonoBehaviour
     private Mesh _mesh;
     private bool[][][] _grid;
 
-    static private readonly IFilterBuilder[] FilterBuilders =
-    {
-        new SingleFilter(),
-        new DuoFilter(),
-        new TrioFilter(), 
-        new SquareFilter(), 
-        new TetraFilter(), 
-        new SnakeFilter()
-    };
-
-    void Awake()
+    private void Awake()
     {
         _gridBound = GetComponent<BoxCollider>();
         _gridBound.isTrigger = true;
@@ -33,7 +22,7 @@ public class MarchingCubeRenderer : MonoBehaviour
         meshRenderer.material = Material;
     }
 
-    void Update()
+    private void Update()
     {
         Blob[] blobs = (BlobsRootNode ?? gameObject).GetComponentsInChildren<Blob>();
 
@@ -43,33 +32,10 @@ public class MarchingCubeRenderer : MonoBehaviour
         bool[][][] grid = ComputeGrid(blobs);
         _grid = grid;
 
-        //GenerateMesh(grid);
         CreateMesh(grid);
     }
 
-    void OnDrawGizmos()
-    {
-        if (_grid == null)
-            return;
-
-        for (int i = 0; i < _grid.Length; i++)
-            for (int j = 0; j < _grid[i].Length; j++)
-                for (int k = 0; k < _grid[i][j].Length; k++)
-                {
-                    if (!_grid[i][j][k])
-                        continue;
-
-                    float x = _gridBound.bounds.min.x + i * GridStep;
-                    float y = _gridBound.bounds.min.y + j * GridStep;
-                    float z = _gridBound.bounds.min.z + k * GridStep;
-
-                    var pos = new Vector3(x, y, z);
-                    Gizmos.color = Color.red;
-                    Gizmos.DrawSphere(pos, GridStep / 2f);
-                }
-    }
-
-    public bool[][][] ComputeGrid(Blob[] blobs)
+    private bool[][][] ComputeGrid(Blob[] blobs)
     {
         int sizeX = (int)(_gridBound.bounds.size.x / GridStep) + 1;
         int sizeY = (int)(_gridBound.bounds.size.y / GridStep) + 1;
@@ -111,36 +77,6 @@ public class MarchingCubeRenderer : MonoBehaviour
         return grid;
     }
 
-    private void GenerateMesh(bool[][][] grid)
-    {
-        _mesh.Clear();
-        var meshData = new MeshData();
-
-        for (int i = 0; i < grid.Length - 1; i++)
-            for (int j = 0; j < grid[i].Length - 1; j++)
-                for (int k = 0; k < grid[i][j].Length - 1; k++)
-                {
-                    foreach (IFilterBuilder filter in FilterBuilders)
-                    {
-                        IEnumerable<int> result;
-                        bool state;
-                        var localCube = new LocalCube(grid, i, j, k);
-
-                        if (localCube.All(x => x.Value == localCube.First().Value))
-                            continue;
-
-                        if (localCube.ApplyFilter(filter, out result, out state))
-                        {
-                            Vector3 cubeOrigin = _gridBound.bounds.min + new Vector3(i, j, k) * GridStep;
-                            filter.Draw(meshData, cubeOrigin, result.Reverse().ToArray(), !state);
-                        }
-                    }
-                }
-
-        _mesh.vertices = meshData.Vertices.ToArray();
-        _mesh.triangles = meshData.Triangles.ToArray();
-    }
-
     /*  Cube :
          * 
          *     4----5
@@ -150,7 +86,7 @@ public class MarchingCubeRenderer : MonoBehaviour
          *   |/   |/
          *   3----2
          */
-    // NOTE: Version annexe de GenerateMesh, attention, cube inversé par rapport aux autres méthodes
+
     private void CreateMesh(bool[][][] grid)
     {
         _mesh.Clear();
@@ -160,35 +96,33 @@ public class MarchingCubeRenderer : MonoBehaviour
             for (int y = 0; y < grid[x].Length - 1; y++)
                 for (int z = 0; z < grid[x][y].Length - 1; z++)
                 {
+                    Vector3 gridPosition = new Vector3(x, y, z) * GridStep;
+
                     // En partant des sommets in / out, on récupère les arrètes intersectées.
                     int index = GetIntersectedEdgesIndex(x, y, z, grid);
-                    int intersectedEdges = LookAtTable.intersectedIndex[index];
+                    int intersectedEdges = LookAtTable.IntersectedIndex[index];
 
-                    Vector3[] intersectedEdgesCenters = new Vector3[12];
-                    for (int i=0;i<12;i++)
-                    {
-                        if ((intersectedEdges & (1 << i)) != 0) //Moche: On regarde le i-ème bit de intersectedEdges, si il est à 1 on récupère le centre de l'arrète intersectée
-                        {
-                            intersectedEdgesCenters[i].x = x + LookAtTable.edgeCenterRelativePosition[i].x; 
-                            intersectedEdgesCenters[i].y = y + LookAtTable.edgeCenterRelativePosition[i].y;
-                            intersectedEdgesCenters[i].z = z + LookAtTable.edgeCenterRelativePosition[i].z;
-                        }
-                    }
-                    // A partir des arrèetes intersectées, on va chercher quels triangles il faut créer.
+                    var intersectedEdgesCenters = new Vector3[12];
+                    for (int i = 0; i < 12; i++)
+                        if ((intersectedEdges & (1 << i)) != 0) // On regarde le i-ème bit de intersectedEdges, si il est à 1 on récupère le centre de l'arrète intersectée
+                            intersectedEdgesCenters[i] = _gridBound.bounds.min + gridPosition + LookAtTable.EdgeCenterRelativePosition[i];
+
+                    // A partir des arrètes intersectées, on va chercher quels triangles il faut créer.
                     for (int i = 0; i < 5; i++)
                     {
-                        if (LookAtTable.intersectedEdgesToTriangles[index, 3 * i] < 0)
+                        if (LookAtTable.IntersectedEdgesToTriangles[index, 3 * i] < 0)
                             break;
 
                         int currentIndex = meshData.Vertices.Count;
                         for (int j = 0; j < 3; j++)
                         {
-                            int vertice = LookAtTable.intersectedEdgesToTriangles[index, 3 * i + j];
+                            int vertex = LookAtTable.IntersectedEdgesToTriangles[index, 3 * i + j];
                             meshData.Triangles.Add(currentIndex + j);
-                            meshData.Vertices.Add(intersectedEdgesCenters[vertice]);
+                            meshData.Vertices.Add(intersectedEdgesCenters[vertex]);
                         }
                     }
                 }
+
         _mesh.vertices = meshData.Vertices.ToArray();
         _mesh.triangles = meshData.Triangles.ToArray();
     }
@@ -196,180 +130,39 @@ public class MarchingCubeRenderer : MonoBehaviour
     private int GetIntersectedEdgesIndex(int x, int y, int z, bool[][][] grid)
     {
         int index = 0;
-        int puissance = 1;
+
         for (int i = 0; i < 8; i++)
         {
-            bool temp = grid[x + LookAtTable.vertexRelativePosition[i, 0]][y + LookAtTable.vertexRelativePosition[i, 1]][z + LookAtTable.vertexRelativePosition[i, 2]];
-            if(temp)
-            {
-                //index |= 1 << i; // Moche
-                index += puissance;
-            }
-            puissance *= 2;
-        }   
+            int[] relative = LookAtTable.VertexRelativePosition[i];
+
+            if (grid[x + relative[0]][y + relative[1]][z + relative[2]])
+                index |= 1 << i;
+        }
+
         return index;
     }
-
-    #region Filters
-
-    public class SingleFilter : FilterBuilder
+    
+    /*
+    void OnDrawGizmos()
     {
-        /*  Cube :
-         * 
-         *     .----.
-         *   ./|   /|
-         *   2----. |
-         *   | 1--|-.
-         *   |/   |/
-         *   0----3
-         */
+        if (_grid == null)
+            return;
 
-        public SingleFilter()
-        {
-            int p1 = NeighborOf(0, MustBe.NotEqual);
-            int p2 = NeighborOf(0, MustBe.NotEqual);
-            int p3 = NeighborOf(0, MustBe.NotEqual);
+        for (int i = 0; i < _grid.Length; i++)
+            for (int j = 0; j < _grid[i].Length; j++)
+                for (int k = 0; k < _grid[i][j].Length; k++)
+                {
+                    if (!_grid[i][j][k])
+                        continue;
 
-            AddTriangle(0, p1, 0, p2, 0, p3);
-        }
+                    float x = _gridBound.bounds.min.x + i * GridStep;
+                    float y = _gridBound.bounds.min.y + j * GridStep;
+                    float z = _gridBound.bounds.min.z + k * GridStep;
+
+                    var pos = new Vector3(x, y, z);
+                    Gizmos.color = Color.red;
+                    Gizmos.DrawSphere(pos, GridStep / 2f);
+                }
     }
-
-    public class DuoFilter : FilterBuilder
-    {
-        /*  Cube :
-         * 
-         *     .----.
-         *   ./|   /|
-         *   3----5 |
-         *   | 2--|-4
-         *   |/   |/
-         *   0----1
-         */
-
-        public DuoFilter()
-        {
-            int p1 = NeighborOf(0, MustBe.Equal);
-
-            int p2 = NeighborOf(0, MustBe.NotEqual);
-            int p3 = NeighborOf(0, MustBe.NotEqual);
-            int p4 = NeighborOf(p1, MustBe.NotEqual);
-            int p5 = NeighborOf(p1, MustBe.NotEqual);
-
-            AddQuad(0, p2, 0, p3, p1, p5, p1, p4);
-        }
-    }
-
-    public class TrioFilter : FilterBuilder
-    {
-        /*  Cube :
-         * 
-         *     2----6
-         *   ./|   /|
-         *   3----. |
-         *   | 1--|-5
-         *   |/   |/
-         *   0----4
-         */
-
-        public TrioFilter()
-        {
-            int p1 = NeighborOf(0, MustBe.Equal);
-            int p2 = NeighborOf(p1, MustBe.Equal);
-
-            int p3 = NeighborOf(0, MustBe.NotEqual);
-            int p4 = NeighborOf(0, MustBe.NotEqual);
-            int p5 = NeighborOf(p1, MustBe.NotEqual);
-            int p6 = NeighborOf(p2, MustBe.NotEqual);
-
-            AddQuad(0, p4, 0, p3, p2, p3, p2, p6);
-            AddTriangle(0, p4, p2, p6, p1, p5);
-        }
-    }
-
-    public class SquareFilter : FilterBuilder
-    {
-        /*  Cube :
-         * 
-         *     2----6
-         *   ./|   /|
-         *   3----7 |
-         *   | 1--|-5
-         *   |/   |/
-         *   0----4
-         */
-
-        public SquareFilter()
-        {
-            int p1 = NeighborOf(0, MustBe.Equal);
-            int p2 = NeighborOf(p1, MustBe.Equal);
-            int p3 = NeighborOf(p2, MustBe.Equal);
-
-            int p4 = NeighborOf(0, MustBe.NotEqual);
-            int p5 = NeighborOf(p1, MustBe.NotEqual);
-            int p6 = NeighborOf(p2, MustBe.NotEqual);
-            int p7 = NeighborOf(p3, MustBe.NotEqual);
-
-            AddQuad(0, p4, p1, p5, p2, p6, p3, p7);
-        }
-    }
-
-    public class TetraFilter : FilterBuilder
-    {
-        /*  Cube :
-         * 
-         *     2----6
-         *   ./|   /|
-         *   4----. |
-         *   | 1--|-3
-         *   |/   |/
-         *   0----5
-         */
-
-        public TetraFilter()
-        {
-            int p1 = NeighborOf(0, MustBe.Equal);
-            int p2 = NeighborOf(p1, MustBe.Equal);
-            int p3 = NeighborOf(p1, MustBe.Equal);
-
-            int p4 = NeighborOf(0, MustBe.NotEqual);
-            int p5 = NeighborOf(0, MustBe.NotEqual);
-            int p6 = NeighborOf(p2, MustBe.NotEqual);
-
-            AddQuad(0, p4, 0, p5, p5, p3, p2, p4);
-            AddQuad(p2, p4, p3, p5, p3, p6, p2, p6);
-        }
-    }
-
-    public class SnakeFilter : FilterBuilder
-    {
-        /*  Cube :
-         * 
-         *     4----6
-         *   ./|   /|
-         *   1----7 |
-         *   | 3--|-5
-         *   |/   |/
-         *   0----2
-         */
-
-        public SnakeFilter()
-        {
-            int p1 = NeighborOf(0, MustBe.NotEqual);
-            int p2 = NeighborOf(0, MustBe.NotEqual);
-            int p3 = NeighborOf(0, MustBe.Equal);
-
-            int p4 = NeighborOf(p3, MustBe.NotEqual);
-            int p5 = NeighborOf(p3, MustBe.Equal);
-
-            int p6 = NeighborOf(p5, MustBe.Equal);
-            int p7 = NeighborOf(p5, MustBe.NotEqual);
-
-            AddTriangle(0, p1, p3, p4, 0, p2);
-            AddTriangle(p3, p4, p6, p7, p4, p6);
-            AddTriangle(p6, p7, 0, p2, p2, p5);
-            AddTriangle(p3, p4, 0, p2, p6, p7);
-        }
-    }
-
-    #endregion // Filters
+    */
 }

@@ -18,11 +18,6 @@ public class LocalCube : IEnumerable<PointState>
     private readonly List<PointState> _pointStates;
     private readonly List<int> _ingoredPoints;
 
-    public bool this[int pointIndex]
-    {
-        get { return _grid[_i + pointIndex / 4][_j + (pointIndex / 2) % 2][_k + pointIndex % 2]; }
-    }
-
     public LocalCube(bool[][][] grid, int i, int j, int k)
     {
         _grid = grid;
@@ -44,12 +39,9 @@ public class LocalCube : IEnumerable<PointState>
         _pointStates.Sort((x, y) => y.PointIndex.CompareTo(x.PointIndex));
     }
 
-    private void Add(int pointIndex, bool value)
+    public bool this[int pointIndex]
     {
-        _pointStates.Add(new PointState {
-            PointIndex = pointIndex,
-            Value = value
-        });
+        get { return _grid[_i + pointIndex / 4][_j + (pointIndex / 2) % 2][_k + pointIndex % 2]; }
     }
 
     public bool ApplyFilter(IFilterBuilder filter, out IEnumerable<int> result, out bool state)
@@ -78,6 +70,30 @@ public class LocalCube : IEnumerable<PointState>
         return false;
     }
 
+    public void Ignore(int pointIndex)
+    {
+        _ingoredPoints.Add(pointIndex);
+    }
+
+    public void StopIgnoring(int pointIndex)
+    {
+        _ingoredPoints.Remove(pointIndex);
+    }
+
+    public IEnumerator<PointState> GetEnumerator()
+    {
+        return _pointStates.Where(x => !_ingoredPoints.Contains(x.PointIndex)).GetEnumerator();
+    }
+
+    private void Add(int pointIndex, bool value)
+    {
+        _pointStates.Add(new PointState
+        {
+            PointIndex = pointIndex,
+            Value = value
+        });
+    }
+
     private bool ApplyFilter(Stack<NeighborhoodRule> rules, Stack<int> result)
     {
         if (!rules.Any())
@@ -86,7 +102,7 @@ public class LocalCube : IEnumerable<PointState>
         NeighborhoodRule rule = rules.Pop();
 
         int resultPoint = result.ElementAt(result.Count - rule.PointId - 1);
-        int[] neighbors = LookAtTable.Neighborhood[resultPoint];
+        int[] neighbors = FilterBasedLookAtTable.Neighborhood[resultPoint];
         IEnumerable<PointState> localNeighbors = this.Where(x => neighbors.Contains(x.PointIndex)).ToArray();
 
         foreach (PointState point in localNeighbors)
@@ -107,21 +123,6 @@ public class LocalCube : IEnumerable<PointState>
 
         rules.Push(rule);
         return false;
-    }
-
-    public void Ignore(int pointIndex)
-    {
-        _ingoredPoints.Add(pointIndex);
-    }
-
-    public void StopIgnoring(int pointIndex)
-    {
-        _ingoredPoints.Remove(pointIndex);
-    }
-
-    public IEnumerator<PointState> GetEnumerator()
-    {
-        return _pointStates.Where(x => !_ingoredPoints.Contains(x.PointIndex)).GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()

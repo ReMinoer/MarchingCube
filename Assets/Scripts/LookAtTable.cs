@@ -12,106 +12,45 @@ static public class LookAtTable
         *   0----4
         */
 
-    static public readonly int[][] Neighborhood;
-    static public readonly int[,] Edges;
-    static public readonly Vector3[] EdgeCenters;
+    static public readonly int[][] VertexRelativePosition;
+    static public readonly Vector3[] EdgeCenterRelativePosition;
 
-    static public readonly int[] edgeOrigin;
-    static public readonly int[,] vertexRelativePosition;
-    static public readonly Vector3[] edgeCenterRelativePosition;
-
-    static public readonly int[] intersectedIndex;
-    static public readonly int[,] intersectedEdgesToTriangles;
+    static public readonly int[] IntersectedIndex;
+    static public readonly int[,] IntersectedEdgesToTriangles;
 
     static LookAtTable()
     {
-        Neighborhood = new int[8][];
-
-        Neighborhood[0] = new[] { 1, 2, 4 };
-        Neighborhood[1] = new[] { 0, 3, 5 };
-        Neighborhood[2] = new[] { 3, 0, 6 };
-        Neighborhood[3] = new[] { 2, 1, 7 };
-        Neighborhood[4] = new[] { 5, 6, 0 };
-        Neighborhood[5] = new[] { 4, 7, 1 };
-        Neighborhood[6] = new[] { 7, 4, 2 };
-        Neighborhood[7] = new[] { 6, 5, 3 };
-
-        Edges = new int[8, 8];
-        for (int i = 0; i < Edges.Length; i++)
-            Edges[i / 8, i % 8] = -1;
-
-        Edges[0, 1] = 0;
-        Edges[0, 2] = 1;
-        Edges[3, 1] = 2;
-        Edges[3, 2] = 3;
-        Edges[4, 5] = 4;
-        Edges[4, 6] = 5;
-        Edges[7, 5] = 6;
-        Edges[7, 6] = 7;
-        Edges[0, 4] = 8;
-        Edges[1, 5] = 9;
-        Edges[2, 6] = 10;
-        Edges[3, 7] = 11;
-
-        Edges[1, 0] = 0;
-        Edges[2, 0] = 1;
-        Edges[1, 3] = 2;
-        Edges[2, 3] = 3;
-        Edges[5, 4] = 4;
-        Edges[6, 4] = 5;
-        Edges[5, 7] = 6;
-        Edges[6, 7] = 7;
-        Edges[4, 0] = 8;
-        Edges[5, 1] = 9;
-        Edges[6, 2] = 10;
-        Edges[7, 3] = 11;
-
-        EdgeCenters = new Vector3[12];
-        EdgeCenters[0] = new Vector3(0.0f, 0.0f, 0.5f);
-        EdgeCenters[1] = new Vector3(0.0f, 0.5f, 0.0f);
-        EdgeCenters[2] = new Vector3(0.0f, 0.5f, 1.0f);
-        EdgeCenters[3] = new Vector3(0.0f, 1.0f, 0.5f);
-        EdgeCenters[4] = new Vector3(1.0f, 0.0f, 0.5f);
-        EdgeCenters[5] = new Vector3(1.0f, 0.5f, 0.0f);
-        EdgeCenters[6] = new Vector3(1.0f, 0.5f, 1.0f);
-        EdgeCenters[7] = new Vector3(1.0f, 1.0f, 0.5f);
-        EdgeCenters[8] = new Vector3(0.5f, 0.0f, 0.0f);
-        EdgeCenters[9] = new Vector3(0.5f, 0.0f, 1.0f);
-        EdgeCenters[10] = new Vector3(0.5f, 1.0f, 0.0f);
-        EdgeCenters[11] = new Vector3(0.5f, 1.0f, 1.0f);
-
         // Position des sommets relativement au premier sommet.
-        vertexRelativePosition = new int[,]
+        VertexRelativePosition = new []
         {
-            {0, 0, 0},
-            {1, 0, 0},
-            {1, 1, 0},
-            {0, 1, 0},
-
-            {0, 0, 1},
-            {1, 0, 1},
-            {1, 1, 1},
-            {0, 1, 1}
+            new [] {0, 0, 0},
+            new [] {1, 0, 0},
+            new [] {1, 1, 0},
+            new [] {0, 1, 0},
+            new [] {0, 0, 1},
+            new [] {1, 0, 1},
+            new [] {1, 1, 1},
+            new [] {0, 1, 1}
         };
 
-        edgeCenterRelativePosition = new Vector3[12];
-        edgeCenterRelativePosition[0] = new Vector3(0.5f, 0.0f, 0.0f);
-        edgeCenterRelativePosition[1] = new Vector3(1.0f, 0.5f, 0.0f);
-        edgeCenterRelativePosition[2] = new Vector3(0.5f, 1.0f, 0.0f);
-        edgeCenterRelativePosition[3] = new Vector3(0.0f, 0.5f, 0.0f);
+        EdgeCenterRelativePosition = new Vector3[12];
+        EdgeCenterRelativePosition[0] = new Vector3(0.5f, 0.0f, 0.0f);
+        EdgeCenterRelativePosition[1] = new Vector3(1.0f, 0.5f, 0.0f);
+        EdgeCenterRelativePosition[2] = new Vector3(0.5f, 1.0f, 0.0f);
+        EdgeCenterRelativePosition[3] = new Vector3(0.0f, 0.5f, 0.0f);
 
-        edgeCenterRelativePosition[4] = new Vector3(0.5f, 0.0f, 1.0f);
-        edgeCenterRelativePosition[5] = new Vector3(1.0f, 0.5f, 1.0f);
-        edgeCenterRelativePosition[6] = new Vector3(0.5f, 1.0f, 1.0f);
-        edgeCenterRelativePosition[7] = new Vector3(0.0f, 0.5f, 1.0f);
+        EdgeCenterRelativePosition[4] = new Vector3(0.5f, 0.0f, 1.0f);
+        EdgeCenterRelativePosition[5] = new Vector3(1.0f, 0.5f, 1.0f);
+        EdgeCenterRelativePosition[6] = new Vector3(0.5f, 1.0f, 1.0f);
+        EdgeCenterRelativePosition[7] = new Vector3(0.0f, 0.5f, 1.0f);
 
-        edgeCenterRelativePosition[8] = new Vector3(0.0f, 0.0f, 0.5f);
-        edgeCenterRelativePosition[9] = new Vector3(1.0f, 0.0f, 0.5f);
-        edgeCenterRelativePosition[10] = new Vector3(1.0f, 1.0f, 0.5f);
-        edgeCenterRelativePosition[11] = new Vector3(0.0f, 1.0f, 0.5f);
+        EdgeCenterRelativePosition[8] = new Vector3(0.0f, 0.0f, 0.5f);
+        EdgeCenterRelativePosition[9] = new Vector3(1.0f, 0.0f, 0.5f);
+        EdgeCenterRelativePosition[10] = new Vector3(1.0f, 1.0f, 0.5f);
+        EdgeCenterRelativePosition[11] = new Vector3(0.0f, 1.0f, 0.5f);
 
         // Arêtes intersectées sur 12bits. bit n = 1 => arête n intersectée
-        intersectedIndex = new int[]
+        IntersectedIndex = new []
         {
             0x000, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c, 0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
             0x190, 0x099, 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c, 0x99c, 0x895, 0xb9f, 0xa96, 0xd9a, 0xc93, 0xf99, 0xe90,
@@ -133,7 +72,7 @@ static public class LookAtTable
         
         // Table reliant l'arête intersectée aux triangles à créer.
             // -1 signifie pas de triangles, toutes les lignes finissent par un -1. ( Max 5 triangles)
-        intersectedEdgesToTriangles = new int[,]
+        IntersectedEdgesToTriangles = new [,]
         {
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},

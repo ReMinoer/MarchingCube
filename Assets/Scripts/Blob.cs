@@ -1,11 +1,10 @@
-﻿using UnityEngine;
-using System;
+﻿using System;
+using UnityEngine;
 
 public class Blob : MonoBehaviour
 {
-	public Func<float,float> WeightFunction { get; set; }
     private Vector3 _lastPosition;
-
+    public Func<float, float> WeightFunction { get; set; }
     public bool Dirty { get; private set; }
 
     public Blob()
