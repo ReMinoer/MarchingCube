@@ -1,23 +1,27 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider))]
 public class MarchingCubeRenderer : MonoBehaviour
 {
+    private const int VerticesPerMesh = 60000;
+    static private readonly int[] VerticesOrder = { 2, 1, 0 };
     public GameObject BlobsRootNode;
     public Material Material;
     public float GridStep = 0.1f;
     public float WeightThreshold = 10f;
     private BoxCollider _gridBound;
-    private Mesh _mesh;
+    private Mesh _currentMesh;
     private bool[][][] _grid;
-    private int[] verticesOrder = new int[] { 2, 1, 0 };
+    private readonly List<GameObject> _additionalMeshes = new List<GameObject>();
     
     private void Awake()
     {
         _gridBound = GetComponent<BoxCollider>();
         _gridBound.isTrigger = true;
-        _mesh = gameObject.AddComponent<MeshFilter>().mesh;
+
+        _currentMesh = gameObject.AddComponent<MeshFilter>().mesh;
 
         var meshRenderer = gameObject.AddComponent<MeshRenderer>();
         meshRenderer.material = Material;
@@ -90,7 +94,11 @@ public class MarchingCubeRenderer : MonoBehaviour
 
     private void CreateMesh(bool[][][] grid)
     {
-        _mesh.Clear();
+        _currentMesh.Clear();
+
+        foreach (GameObject additionalMesh in _additionalMeshes)
+            Destroy(additionalMesh);
+
         var meshData = new MeshData();
 
         for (int x = 0; x < grid.Length - 1; x++)
@@ -118,14 +126,31 @@ public class MarchingCubeRenderer : MonoBehaviour
                         for (int j = 0; j < 3; j++)
                         {
                             int vertex = LookAtTable.IntersectedEdgesToTriangles[index, 3 * i + j];
-                            meshData.Triangles.Add(currentIndex + verticesOrder[j]);
+                            meshData.Triangles.Add(currentIndex + VerticesOrder[j]);
                             meshData.Vertices.Add(intersectedEdgesCenters[vertex]);
+                        }
+
+                        if (meshData.Vertices.Count > VerticesPerMesh)
+                        {
+                            _currentMesh.vertices = meshData.Vertices.ToArray();
+                            _currentMesh.triangles = meshData.Triangles.ToArray();
+
+                            var additionalMesh = new GameObject("AdditionalMesh");
+                            additionalMesh.transform.parent = transform;
+                            _additionalMeshes.Add(additionalMesh);
+
+                            _currentMesh = additionalMesh.AddComponent<MeshFilter>().mesh;
+
+                            var meshRenderer = additionalMesh.AddComponent<MeshRenderer>();
+                            meshRenderer.material = Material;
+
+                            meshData = new MeshData();
                         }
                     }
                 }
 
-        _mesh.vertices = meshData.Vertices.ToArray();
-        _mesh.triangles = meshData.Triangles.ToArray();
+        _currentMesh.vertices = meshData.Vertices.ToArray();
+        _currentMesh.triangles = meshData.Triangles.ToArray();
     }
 
     private int GetIntersectedEdgesIndex(int x, int y, int z, bool[][][] grid)
