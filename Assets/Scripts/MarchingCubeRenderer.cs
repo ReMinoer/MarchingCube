@@ -106,7 +106,7 @@ public class MarchingCubeRenderer : MonoBehaviour
                     var intersectedEdgesCenters = new Vector3[12];
                     for (int i = 0; i < 12; i++)
                         if ((intersectedEdges & (1 << i)) != 0) // On regarde le i-ème bit de intersectedEdges, si il est à 1 on récupère le centre de l'arrète intersectée
-                            intersectedEdgesCenters[i] = _gridBound.bounds.min + gridPosition + LookAtTable.EdgeCenterRelativePosition[i];
+                            intersectedEdgesCenters[i] = gridPosition + LookAtTable.EdgeCenterRelativePosition[i] - _gridBound.bounds.extents;
 
                     // A partir des arrètes intersectées, on va chercher quels triangles il faut créer.
                     for (int i = 0; i < 5; i++)
