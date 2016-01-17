@@ -11,7 +11,8 @@ public class MarchingCubeRenderer : MonoBehaviour
     private BoxCollider _gridBound;
     private Mesh _mesh;
     private bool[][][] _grid;
-
+    private int[] verticesOrder = new int[] { 2, 1, 0 };
+    
     private void Awake()
     {
         _gridBound = GetComponent<BoxCollider>();
@@ -117,7 +118,7 @@ public class MarchingCubeRenderer : MonoBehaviour
                         for (int j = 0; j < 3; j++)
                         {
                             int vertex = LookAtTable.IntersectedEdgesToTriangles[index, 3 * i + j];
-                            meshData.Triangles.Add(currentIndex + j);
+                            meshData.Triangles.Add(currentIndex + verticesOrder[j]);
                             meshData.Vertices.Add(intersectedEdgesCenters[vertex]);
                         }
                     }
