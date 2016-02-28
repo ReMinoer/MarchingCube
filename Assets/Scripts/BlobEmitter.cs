@@ -32,7 +32,7 @@ public class BlobEmitter : MonoBehaviour
             else
                 blob = _blobs[i];
 
-            blob.transform.position = _particleSystem.transform.position + particles[i].position;
+            blob.transform.position = _particleSystem.transform.position + _particleSystem.transform.rotation * particles[i].position;
             i++;
         }
 
